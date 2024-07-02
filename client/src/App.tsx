@@ -1,30 +1,17 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import "./App.css";
+import Header from "./components/Header";
+import Home from "./pages/Home";
 
 function App() {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-
-  useEffect(() => {
-    const newSocket = new WebSocket('ws://localhost:8080');
-    newSocket.onopen = () => {
-      console.log("connection established");
-      newSocket.send("hello server from client");
-    }
-
-    newSocket.onmessage = (messege) => {
-      console.log("messege received " + messege);
-    }
-
-    setSocket(newSocket);
-
-    return newSocket.close();
-  },[])
-
   return (
-    <div className="">
-      <h1>Hello there</h1>
-    </div>
+    <BrowserRouter>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
-export default App
+export default App;
