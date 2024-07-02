@@ -32,11 +32,11 @@ wss.on("connection", (ws) => {
       ws.send(JSON.stringify({ gameId, playerId }));
     } else if (data.type === "join") {
       console.log("Join request");
-      console.log(data.payload);
+      console.log(data.gameId);
 
       const game = games.find((game) => {
         console.log(game.gameId);
-        return game.gameId === data.payload;
+        return game.gameId === data.gameId;
       });
 
       if (!game) {
@@ -64,8 +64,8 @@ wss.on("connection", (ws) => {
       // lets check here is move vaild or not
       const game = games.find((game) => game.gameId === gameId);
 
-      const isValidMove = game?.moves.includes(move);
-      if (!isValidMove) {
+      const isNotValidMove = game?.moves.includes(move);
+      if (isNotValidMove) {
         return ws.send(JSON.stringify({ message: "Invalid move" }));
       }
 
@@ -84,6 +84,11 @@ wss.on("connection", (ws) => {
         
         game?.players.forEach(player => {
             const playerWs = player.ws;
+            if (player.playerId === playerId) {
+                player.isTurn = false;
+            } else {
+                player.isTurn = true;
+            }
             playerWs?.send(
               JSON.stringify({
                 type: "gameUpdate",
