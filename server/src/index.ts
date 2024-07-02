@@ -12,6 +12,25 @@ const httpServer = app.listen(8080, () => {
 const wss = new WebSocketServer({ server: httpServer });
 
 const games: TicTacGame[] = [];
+const winnigArray = [
+  ["1", "2", "3"],
+  ["4", "5", "6"],
+  ["7", "8", "9"],
+  ["1", "4", "7"],
+  ["2", "5", "8"],
+  ["3", "6", "9"],
+  ["1", "5", "9"],
+  ["2", "4", "6"],
+];
+
+const checkWin = (playersMoves: string[]): boolean => {
+  for (const winCondition of winnigArray) {
+    if (winCondition.every((num) => playersMoves.includes(num))) {
+      return true;
+    }
+  }
+  return false;
+};
 
 wss.on("connection", (ws) => {
   ws.on("error", () => {
@@ -61,13 +80,7 @@ wss.on("connection", (ws) => {
       if (!isValidGame(gameId, playerId, games)) {
         return ws.send(JSON.stringify({ message: "Invalid credentials" }));
       }
-      // lets check here is move vaild or not
       const game = games.find((game) => game.gameId === gameId);
-
-      const isNotValidMove = game?.moves.includes(move);
-      if (isNotValidMove) {
-        return ws.send(JSON.stringify({ message: "Invalid move" }));
-      }
 
       // is the turn of that user who have send the move??
       const player = game?.players.find(
@@ -77,26 +90,40 @@ wss.on("connection", (ws) => {
         return ws.send(JSON.stringify({ messege: "Its not your turn" }));
       }
 
+      // lets check here is move vaild or not
+      const isNotValidMove = game?.moves.includes(move);
+      if (isNotValidMove) {
+        return ws.send(JSON.stringify({ message: "Invalid move" }));
+      }
+
       player.moves.push(move);
-      player.setIsTurn(false);
       game?.moves.push(move);
-        const updatedMoves = game?.moves;
-        
-        game?.players.forEach(player => {
-            const playerWs = player.ws;
-            if (player.playerId === playerId) {
-                player.isTurn = false;
-            } else {
-                player.isTurn = true;
-            }
-            playerWs?.send(
-              JSON.stringify({
-                type: "gameUpdate",
-                  updatedMoves,
-              })
-            );
-    })
-        
+      const updatedMoves = game?.moves;
+      let result : string;
+      if (checkWin(player.moves)) {
+        result = `${player.playerId} ${player.playingSign} Won the game`;
+      } else {
+        if (game?.moves.length === 9) {
+          result = "Draw";
+        }
+        result = "Still playing";
+      }
+      game?.players.forEach((player) => {
+        const playerWs = player.ws;
+        if (player.playerId === playerId) {
+          player.isTurn = false;
+        } else {
+          player.isTurn = true;
+        }
+        playerWs?.send(
+          JSON.stringify({
+            type: "gameUpdate",
+            updatedMoves,
+            result,
+          })
+        );
+      });
+
       ws.send(JSON.stringify({ gamsArray: game?.moves }));
     }
   });
