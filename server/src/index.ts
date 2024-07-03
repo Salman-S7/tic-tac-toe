@@ -49,7 +49,7 @@ wss.on("connection", (ws) => {
 
       games.push(game);
       player.setWebsocket(ws);
-      ws.send(JSON.stringify({ gameId, playerId }));
+      ws.send(JSON.stringify({ gameId, playerId, type:"created" }));
     } else if (data.type === "join") {
       console.log("Join request");
       console.log(data.gameId);
@@ -61,7 +61,7 @@ wss.on("connection", (ws) => {
 
       if (!game) {
         return ws.send(
-          JSON.stringify({ message: "No room with given id found" })
+          JSON.stringify({ message: "No room with given id found", type: "noGame" })
         );
       }
 
@@ -72,14 +72,20 @@ wss.on("connection", (ws) => {
       game?.players.push(player);
       player.setWebsocket(ws);
       const gameId = game?.gameId;
-      ws.send(JSON.stringify({ gameId, playerId }));
+      ws.send(JSON.stringify({ gameId, playerId, type: "joined" }));
+
+      game.players.forEach(player => {
+        const playerWs = player.ws;
+        ws.send(JSON.stringify({ message: "Your opponent joined the game" , type: "JoinUpdate"}));
+      })
+
     } else if (data.type === "move") {
       const { playerId } = data;
       const { gameId } = data;
       const { move } = data;
       // this function checks whether player and game exits or not and they are related or not
       if (!isValidGame(gameId, playerId, games)) {
-        return ws.send(JSON.stringify({ message: "Invalid credentials" }));
+        return ws.send(JSON.stringify({ message: "Invalid credentials", type: "InvalidInfo" }));
       }
       const game = games.find((game) => game.gameId === gameId);
 
@@ -88,13 +94,17 @@ wss.on("connection", (ws) => {
         (player) => player.playerId === playerId
       );
       if (!player?.isTurn) {
-        return ws.send(JSON.stringify({ messege: "Its not your turn" }));
+        return ws.send(
+          JSON.stringify({ messege: "Its not your turn", type: "notYourTurn" })
+        );
       }
 
       // lets check here is move vaild or not
       const isNotValidMove = game?.moves.includes(move);
       if (isNotValidMove) {
-        return ws.send(JSON.stringify({ message: "Invalid move" }));
+        return ws.send(
+          JSON.stringify({ message: "Invalid move", type: "invalidMove" })
+        );
       }
 
       player.moves.push(move);
