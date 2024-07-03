@@ -12,6 +12,7 @@ const httpServer = app.listen(8080, () => {
 const wss = new WebSocketServer({ server: httpServer });
 
 const games: TicTacGame[] = [];
+
 const winnigArray = [
   ["1", "2", "3"],
   ["4", "5", "6"],
@@ -97,16 +98,23 @@ wss.on("connection", (ws) => {
       }
 
       player.moves.push(move);
+
+      //saving move to the array
       game?.moves.push(move);
-      const updatedMoves = game?.moves;
-      let result : string;
+      if (game) {
+        game.movesSignArray[move - 1] = player.playingSign;
+      }
+
+      const updatedMoves = game?.movesSignArray;
+      let result: string;
       if (checkWin(player.moves)) {
-        result = `${player.playerId} ${player.playingSign} Won the game`;
+        result = `${player.playingSign} Won the game`;
       } else {
         if (game?.moves.length === 9) {
           result = "Draw";
+        } else {
+          result = "Still playing";
         }
-        result = "Still playing";
       }
       game?.players.forEach((player) => {
         const playerWs = player.ws;
@@ -124,7 +132,13 @@ wss.on("connection", (ws) => {
         );
       });
 
-      ws.send(JSON.stringify({ gamsArray: game?.moves }));
+      if (result === "Draw" || result === `${player.playingSign} Won the game`){
+        games.forEach((game, i) => {
+          if (game.gameId === gameId) {
+            games.splice(i, 1);
+          }
+        })
+      };
     }
   });
 
